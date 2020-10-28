@@ -8,4 +8,8 @@ editor_options:
   chunk_output_type: console
 ---
 
-Welcome to my research website.
+
+Click on this [link](pheno-analysis.html) to see my results.
+
+
+

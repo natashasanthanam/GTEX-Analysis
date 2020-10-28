@@ -1,0 +1,35 @@
+---
+title: "pheno-analysis"
+author: "natashasanthanam"
+date: "2020-10-28"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Phenotype file creation for GCTA
+```{sh, eval=FALSE}
+library(workflowr)
+library(tidyverse)
+library(dplyr)
+library("readxl")
+DATA="/Users/natashasanthanam/Github/GTEX-Analysis/data"
+```
+
+```{sh, eval=FALSE}
+#Read in Excel file of Cortex Phenotypes
+gtex_pheno <- read_excel(glue::glue("{DATA}/gtex_cortex_models_10.10.20.xlsx" ))
+gtex_pheno <- filter(gtex_pheno, gtex_pheno$Average < 0.90 & gtex_pheno$Average > 0.10)
+
+tempo = as.matrix(gtex_pheno[-c(1),-c(1:2)])
+tempo = t(tempo)
+
+row.names(tempo) <- paste(substr(row.names(tempo), 0, 4), substr(row.names(tempo), 6, 10), sep="-")
+df <- as.data.frame(cbind.data.frame(rownames(tempo), rownames(tempo), tempo))
+write_tsv(df, "pheno_gtex.txt", na = "-9", col_names = FALSE, quote_escape = "none")
+```
+
+```{sh, eval=FALSE}
+gcta --grm /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_grm_output --pheno /gpfs/data/im-lab/nas40t2/natasha/pheno_gtex.txt --reml --out /gpfs/data/im-lab/nas40t2/natasha/gtex_output
+```
+
