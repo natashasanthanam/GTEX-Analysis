@@ -7,4 +7,30 @@ editor_options:
   chunk_output_type: console
 ---
 
-Describe your project.
+Using the GTEx V8 data, I performed GCTA analysis. The genotype file exists in 
+```{sh, eval=FALSE}
+/gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz
+```
+
+From there, I converted the vcf file into plink format using
+```{sh, eval=FALSE}
+plink2 --vcf /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz --make-bed --double-id --out /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_ new
+```
+
+Note: without the --double-id plink will create the .fam file with FID being zero 
+
+I then created a grm using the plink files
+
+```{sh, eval=FALSE}
+gcta --bfile /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_new /--autosome --maf 0.01 --make-grm --out /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_grm_output 
+```
+
+I then edited the phenotype file (gtex_cortex_models_10_10_20.xlsx) to the gcta format 
+Check analysis for code to create phenotype file
+
+I then ran gcta in HPC for each phenotype (~250)
+```{sh, eval=FALSE}
+gcta --grm-bin /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_grm_output --pheno /gpfs/data/im-lab/nas40t2/natasha/gtex_pheno.txt --reml --out /gpfs/data/im-lab/nas40t2/natasha/gtex_output --thread-num 4 --mpheno ___
+```
+
+ 
