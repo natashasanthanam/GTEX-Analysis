@@ -22,6 +22,7 @@ done
 library(workflowr)
 library(tidyverse)
 library(dplyr)
+library(stringr)
 DATA="/Users/natashasanthanam/Github/GTEX-Analysis"
 ```
 
@@ -35,6 +36,8 @@ summary(pval$X2)
 h2 = read_tsv(glue::glue("{DATA}/vgvp.txt"),col_names=FALSE)
 summary(h2$X2)
 t.test(h2$X2)
+wilcox.test(h2$X2, h2_perm$X2, alternative = "two.sided")
+hist(h2$X2)
 ```
 
 Pvalues and H2 values for GCTA output generated using permuted phenotype file
@@ -47,11 +50,50 @@ summary(pval_perm$X2)
 
 summary(h2_perm$X2)
 t.test(h2_perm$X2)
+hist(h2_perm$X2)
+
+```
+
+```{sh eval=FALSE}
+pval_perm2 = read_tsv(glue::glue("{DATA}/pval_perm2.txt" ), col_names = FALSE)
+h2_perm2 = read_tsv(glue::glue("{DATA}/vgvp_perm2.txt" ), col_names = FALSE)
+
+hist(pval_perm2$X2)
+summary(pval_perm2$X2)
+
+summary(h2_perm2$X2)
+t.test(h2_perm2$X2)
+hist(h2_perm2$X2)
+```
+
+```{sh eval=FALSE}
+mytest = function(x) 
+{ x= x[!is.na(x)]
+  print(binom.test(sum(x >0) , n=length(x), p=0.5) ) 
+}
+```
 
 
+Reading in Constrain h2 values 
+```{sh eval=FALSE}
+h2_constrain = read_tsv(glue::glue("{DATA}/vgvp_constrain.txt" ), col_names = FALSE)
+h2_perm_constrain = read_tsv(glue::glue("{DATA}/vgvp_perm_constrain.txt" ), col_names = FALSE)
+h2_perm_constrain2 = read_tsv(glue::glue("{DATA}/vgvp_perm_constrain2.txt" ), col_names = FALSE)
+```
+
+Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain
+```{sh eval=FALSE}
+merge(h2_constrain, h2_perm_constrain)
 ```
 
 
 
 
+```{sh eval=FALSE}
+numextract <- function(string){ 
+  str_extract(string, "\\-*\\d+")
+} 
+numextract(h2_constrain$X1)
+
+```
 
