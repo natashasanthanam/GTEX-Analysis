@@ -81,19 +81,57 @@ h2_perm_constrain = read_tsv(glue::glue("{DATA}/vgvp_perm_constrain.txt" ), col_
 h2_perm_constrain2 = read_tsv(glue::glue("{DATA}/vgvp_perm_constrain2.txt" ), col_names = FALSE)
 ```
 
-Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain
-```{sh eval=FALSE}
-merge(h2_constrain, h2_perm_constrain)
-```
-
-
-
 
 ```{sh eval=FALSE}
 numextract <- function(string){ 
   str_extract(string, "\\-*\\d+")
 } 
-numextract(h2_constrain$X1)
+h2$X1 = numextract(h2$X1)
+h2_perm$X1 = numextract(h2_perm$X1)
+h2_perm2$X1 = numextract(h2_perm2$X1)
+
+h2_constrain$X1 = numextract(h2_constrain$X1)
+h2_perm_constrain$X1 = numextract(h2_perm_constrain$X1)
+h2_perm_constrain2$X1 = numextract(h2_perm_constrain2$X2)
 
 ```
+
+
+Not necessary - got sidetracked
+write_tsv(h2_constrain, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_constrain", na = "-9", col_names = FALSE, quote_escape = "none")
+write_tsv(h2_perm_constrain, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain", na = "-9", col_names = FALSE, quote_escape = "none")
+write_tsv(h2_perm_constrain2, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain2", na = "-9", col_names = FALSE, quote_escape = "none")
+
+
+mypath = '/Users/natashasanthanam/Github/GTEX-Analysis/mergemee'
+multmerge = function(mypath){
+filenames=list.files(path=mypath, full.names=TRUE)
+datalist = lapply(filenames, function(x){read.csv(file=x,header=T)})
+Reduce(function(x,y) {merge(x,y, by='X1', all=TRUE)}, datalist)
+}
+mergeh2 = multmerge('C://R//mergemee')
+
+
+
+Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain
+```{sh eval=FALSE}
+
+my.list = list(h2_constrain$X1, h2$X2, h2_perm$X2, h2_perm2$X2, h2_constrain$X2, h2_perm_constrain$X2, h2_perm_constrain2$X2)
+
+new_data = data.frame(lapply(my.list, "length<-", max(lengths(my.list))))
+colnames(new_data) <- c("Phenotype", "H2", "Perm1", "Perm2", "H2 constrained", "Perm constrained 1", "Perm Constrained 2")
+new_data$Phenotype = str_sort(new_data$Phenotype, numeric = TRUE)
+
+pivot_new = data.frame(pivot_longer(new_data, cols = starts_with("Perm"),
+   names_to = "permutations",
+   names_prefix = "perm",
+   values_to = "rank",
+   values_drop_na = TRUE))
+
+write_tsv(new_data, file = 'df.GTEX.txt', na = "-9", col_names = TRUE, quote_escape = "none")
+write_tsv(pivot_new, file = 'df.Pivot.txt', na = "-9", col_names = TRUE, quote_escape = "none")
+```
+
+
+
 
