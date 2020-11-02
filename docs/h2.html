@@ -413,7 +413,7 @@ div.tocify {
 <div class="tab-content">
 <div id="summary" class="tab-pane fade in active">
 <p>
-<strong>Last updated:</strong> 2020-10-30
+<strong>Last updated:</strong> 2020-11-02
 </p>
 <p>
 <strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 6 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 1
@@ -520,6 +520,38 @@ relative
 .
 </td>
 </tr>
+<tr>
+<td style="text-align:left;">
+/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_constrain
+</td>
+<td style="text-align:left;">
+mergemee/h2_constrain
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain
+</td>
+<td style="text-align:left;">
+mergemee/h2_perm_constrain
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain2
+</td>
+<td style="text-align:left;">
+mergemee/h2_perm_constrain2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+/Users/natashasanthanam/Github/GTEX-Analysis/mergemee
+</td>
+<td style="text-align:left;">
+mergemee
+</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -528,16 +560,16 @@ relative
 <div class="panel panel-default">
 <div class="panel-heading">
 <p class="panel-title">
-<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomnatashasanthanamGTEXAnalysistree0ab339f91ef5673e5ba113be991b7ea6d2fbafebtargetblank0ab339fa"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> <a href="https://github.com/natashasanthanam/GTEX-Analysis/tree/0ab339f91ef5673e5ba113be991b7ea6d2fbafeb" target="_blank">0ab339f</a> </a>
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomnatashasanthanamGTEXAnalysistree0f9c4421033c85814cb763ed4644f9020c029007targetblank0f9c442a"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> <a href="https://github.com/natashasanthanam/GTEX-Analysis/tree/0f9c4421033c85814cb763ed4644f9020c029007" target="_blank">0f9c442</a> </a>
 </p>
 </div>
-<div id="strongRepositoryversionstrongahrefhttpsgithubcomnatashasanthanamGTEXAnalysistree0ab339f91ef5673e5ba113be991b7ea6d2fbafebtargetblank0ab339fa" class="panel-collapse collapse">
+<div id="strongRepositoryversionstrongahrefhttpsgithubcomnatashasanthanamGTEXAnalysistree0f9c4421033c85814cb763ed4644f9020c029007targetblank0f9c442a" class="panel-collapse collapse">
 <div class="panel-body">
 <p>
 Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
 </p>
 <p>
-The results in this page were generated with repository version <a href="https://github.com/natashasanthanam/GTEX-Analysis/tree/0ab339f91ef5673e5ba113be991b7ea6d2fbafeb" target="_blank">0ab339f</a>. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+The results in this page were generated with repository version <a href="https://github.com/natashasanthanam/GTEX-Analysis/tree/0f9c4421033c85814cb763ed4644f9020c029007" target="_blank">0f9c442</a>. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
 </p>
 <p>
 Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
@@ -545,6 +577,10 @@ Note that you need to be careful to ensure that all relevant files for the analy
 <pre><code>
 Untracked files:
     Untracked:  data/gtex_cortex_models_10.10.20.xlsx
+    Untracked:  df.GTEX
+    Untracked:  df.GTEX.txt
+    Untracked:  df.Pivot
+    Untracked:  df.Pivot.txt
     Untracked:  hist_gcta.pdf
     Untracked:  pheno_gtex.txt
     Untracked:  pheno_gtex_perm.txt
@@ -599,6 +635,40 @@ Message
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/natashasanthanam/GTEX-Analysis/blob/0f9c4421033c85814cb763ed4644f9020c029007/analysis/h2.Rmd" target="_blank">0f9c442</a>
+</td>
+<td>
+natashasanthanam
+</td>
+<td>
+2020-11-02
+</td>
+<td>
+Add new table with pivot function
+</td>
+</tr>
+<tr>
+<td>
+html
+</td>
+<td>
+<a href="https://rawcdn.githack.com/natashasanthanam/GTEX-Analysis/e0faf3b07de937ea25c06e59f921b5b6ec82ed09/docs/h2.html" target="_blank">e0faf3b</a>
+</td>
+<td>
+natashasanthanam
+</td>
+<td>
+2020-10-30
+</td>
+<td>
+Build site.
+</td>
+</tr>
 <tr>
 <td>
 Rmd
@@ -740,13 +810,35 @@ hist(h2_perm2$X2)</code></pre>
 <pre class="sh"><code>h2_constrain = read_tsv(glue::glue(&quot;{DATA}/vgvp_constrain.txt&quot; ), col_names = FALSE)
 h2_perm_constrain = read_tsv(glue::glue(&quot;{DATA}/vgvp_perm_constrain.txt&quot; ), col_names = FALSE)
 h2_perm_constrain2 = read_tsv(glue::glue(&quot;{DATA}/vgvp_perm_constrain2.txt&quot; ), col_names = FALSE)</code></pre>
-<p>Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain</p>
-<pre class="sh"><code>merge(h2_constrain, h2_perm_constrain)</code></pre>
 <pre class="sh"><code>numextract &lt;- function(string){ 
   str_extract(string, &quot;\\-*\\d+&quot;)
 } 
-numextract(h2_constrain$X1)
+h2$X1 = numextract(h2$X1)
+h2_perm$X1 = numextract(h2_perm$X1)
+h2_perm2$X1 = numextract(h2_perm2$X1)
+
+h2_constrain$X1 = numextract(h2_constrain$X1)
+h2_perm_constrain$X1 = numextract(h2_perm_constrain$X1)
+h2_perm_constrain2$X1 = numextract(h2_perm_constrain2$X2)
 </code></pre>
+<p>Not necessary - got sidetracked write_tsv(h2_constrain, “/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_constrain”, na = “-9”, col_names = FALSE, quote_escape = “none”) write_tsv(h2_perm_constrain, “/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain”, na = “-9”, col_names = FALSE, quote_escape = “none”) write_tsv(h2_perm_constrain2, “/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain2”, na = “-9”, col_names = FALSE, quote_escape = “none”)</p>
+<p>mypath = ‘/Users/natashasanthanam/Github/GTEX-Analysis/mergemee’ multmerge = function(mypath){ filenames=list.files(path=mypath, full.names=TRUE) datalist = lapply(filenames, function(x){read.csv(file=x,header=T)}) Reduce(function(x,y) {merge(x,y, by=‘X1’, all=TRUE)}, datalist) } mergeh2 = multmerge(‘C://R//mergemee’)</p>
+<p>Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain</p>
+<pre class="sh"><code>
+my.list = list(h2_constrain$X1, h2$X2, h2_perm$X2, h2_perm2$X2, h2_constrain$X2, h2_perm_constrain$X2, h2_perm_constrain2$X2)
+
+new_data = data.frame(lapply(my.list, &quot;length&lt;-&quot;, max(lengths(my.list))))
+colnames(new_data) &lt;- c(&quot;Phenotype&quot;, &quot;H2&quot;, &quot;Perm1&quot;, &quot;Perm2&quot;, &quot;H2 constrained&quot;, &quot;Perm constrained 1&quot;, &quot;Perm Constrained 2&quot;)
+new_data$Phenotype = str_sort(new_data$Phenotype, numeric = TRUE)
+
+pivot_new = data.frame(pivot_longer(new_data, cols = starts_with(&quot;Perm&quot;),
+   names_to = &quot;permutations&quot;,
+   names_prefix = &quot;perm&quot;,
+   values_to = &quot;rank&quot;,
+   values_drop_na = TRUE))
+
+write_tsv(new_data, file = &#39;df.GTEX.txt&#39;, na = &quot;-9&quot;, col_names = TRUE, quote_escape = &quot;none&quot;)
+write_tsv(pivot_new, file = &#39;df.Pivot.txt&#39;, na = &quot;-9&quot;, col_names = TRUE, quote_escape = &quot;none&quot;)</code></pre>
 <br>
 <p>
 <button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
