@@ -1,0 +1,60 @@
+---
+title: "gtex-binary-models"
+author: "natashasanthanam"
+date: "2020-11-04"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+This is an R file to average h2 values across different gtex brain samples 
+
+```{sh eval=FALSE}
+library(workflowr)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(glue)
+library(plyr)
+library("readxl")
+DATA="/Users/natashasanthanam/Github/GTEX-Analysis/gtex_binary_models"
+```
+
+
+Pipeline:
+1. read in files
+2. create a new column of average of all rows and filter for values that are apparent > 90 and <10
+3. create long format of data using pivot_longer
+4. add another column tellin where the tissue came from
+
+
+```{sh eval=FALSE}
+filelist = list.files(DATA)
+longdata = data.frame()
+
+for(fila in filelist)
+{
+  df <- read_excel(glue('{DATA}/{fila}'))
+  tissuename = gsub("_models.xlsx","",gsub("gtex_","",fila) )
+  df$Average = rowMeans(subset(df, select = -c(Reaction_ID, Equation)))
+  df <- filter(df, df$Average < 0.90 & df$Average > 0.10)
+  tempo <- df %>% select(-Equation, -Average) %>%  pivot_longer(cols = starts_with("GTEX"), names_to = "Individual_ID" ) %>% mutate(tissue=tissuename) 
+  
+  longdata <- rbind(longdata, tempo)
+  }
+
+```
+
+
+Group by Reaction ID and Individual ID and then summarize
+```{sh eval=FALSE}
+longdata %>%
+  group_by(Reaction_ID, Individual_ID) %>%
+  summarize(mean_value=mean(value))
+ 
+```
+
+
+
+
+

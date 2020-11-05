@@ -23,6 +23,7 @@ library(workflowr)
 library(tidyverse)
 library(dplyr)
 library(stringr)
+library(plotly)
 DATA="/Users/natashasanthanam/Github/GTEX-Analysis"
 ```
 
@@ -86,52 +87,46 @@ h2_perm_constrain2 = read_tsv(glue::glue("{DATA}/vgvp_perm_constrain2.txt" ), co
 numextract <- function(string){ 
   str_extract(string, "\\-*\\d+")
 } 
-h2$X1 = numextract(h2$X1)
-h2_perm$X1 = numextract(h2_perm$X1)
-h2_perm2$X1 = numextract(h2_perm2$X1)
-
-h2_constrain$X1 = numextract(h2_constrain$X1)
-h2_perm_constrain$X1 = numextract(h2_perm_constrain$X1)
-h2_perm_constrain2$X1 = numextract(h2_perm_constrain2$X2)
-
 ```
 
 
-Not necessary - got sidetracked
-write_tsv(h2_constrain, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_constrain", na = "-9", col_names = FALSE, quote_escape = "none")
-write_tsv(h2_perm_constrain, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain", na = "-9", col_names = FALSE, quote_escape = "none")
-write_tsv(h2_perm_constrain2, "/Users/natashasanthanam/Github/GTEX-Analysis/mergemee/h2_perm_constrain2", na = "-9", col_names = FALSE, quote_escape = "none")
-
-
-mypath = '/Users/natashasanthanam/Github/GTEX-Analysis/mergemee'
-multmerge = function(mypath){
-filenames=list.files(path=mypath, full.names=TRUE)
-datalist = lapply(filenames, function(x){read.csv(file=x,header=T)})
-Reduce(function(x,y) {merge(x,y, by='X1', all=TRUE)}, datalist)
-}
-mergeh2 = multmerge('C://R//mergemee')
-
-
-
-Create a file that contains h2 values of with constrain, no constrain, perm with constrain, perm without, perm2 with constrain and perm2 without constrain
+Original Data frame with all 3 h2 values for phenotypes
 ```{sh eval=FALSE}
+h2_constrain$X1 = paste("Obs", numextract(h2_constrain$X1), sep = " ")
+h2_perm_constrain$X1 = paste("Pm1", numextract(h2_perm_constrain$X1), sep = " ")
 
-my.list = list(h2_constrain$X1, h2$X2, h2_perm$X2, h2_perm2$X2, h2_constrain$X2, h2_perm_constrain$X2, h2_perm_constrain2$X2)
+#takes 2 steps to separate the name of second perm
+h2_perm_constrain2$X1 = numextract(substr(h2_perm_constrain2$X1, 46, 50))
+h2_perm_constrain2$X1 = paste("Pm2",h2_perm_constrain2$X1 , sep = " ")
 
-new_data = data.frame(lapply(my.list, "length<-", max(lengths(my.list))))
-colnames(new_data) <- c("Phenotype", "H2", "Perm1", "Perm2", "H2 constrained", "Perm constrained 1", "Perm Constrained 2")
-new_data$Phenotype = str_sort(new_data$Phenotype, numeric = TRUE)
-
-pivot_new = data.frame(pivot_longer(new_data, cols = starts_with("Perm"),
-   names_to = "permutations",
-   names_prefix = "perm",
-   values_to = "rank",
-   values_drop_na = TRUE))
-
-write_tsv(new_data, file = 'df.GTEX.txt', na = "-9", col_names = TRUE, quote_escape = "none")
-write_tsv(pivot_new, file = 'df.Pivot.txt', na = "-9", col_names = TRUE, quote_escape = "none")
+total = rbind(h2_constrain, h2_perm_constrain, h2_perm_constrain2)
+total$X3 <- NULL
 ```
 
 
+Tidying Total Data frame
+```{sh eval=FALSE}
+total2 <- total %>%
+  separate(X1, c("Type", "Phenotype"), 3)
+
+total2 <- data.frame(total2 %>%
+  pivot_wider(names_from = Type, values_from = X2))
+
+total2$Phenotype = str_sort(total2$Phenotype, numeric = TRUE)
+
+colnames(total2) <- c("Phenotype", "Observed", "Perm1", "Perm2")
+
+write_tsv(total2, "/Users/natashasanthanam/Github/GTEX-Analysis/df_total.txt", col_names=TRUE)
+```
+
+
+```{sh eval=FALSE}
+fig <- plot_ly(x = total2$Observed, type="histogram", name="Observed")
+fig <- fig %>% add_histogram(x = total2$Perm1, name="Permutation 1")
+fig <- fig %>% add_histogram(x = total2$Perm2, name="Permutation 2")
+
+
+fig
+```
 
 
