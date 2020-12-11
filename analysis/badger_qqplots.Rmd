@@ -1,0 +1,57 @@
+---
+title: "badger_qqplots"
+author: "natashasanthanam"
+date: "2020-12-08"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Bader script to generate qqplots of predixcan association analysis
+
+```{bash, eval=FALSE}
+#!/bin/bash
+
+#PBS -N psychencode_hg19_qqplots
+#PBS -S /bin/bash
+#PBS -l walltime=1:00:00:00
+#PBS -l nodes=1:ppn=1
+
+#PBS -l mem=8gb
+
+
+#PBS -o /gpfs/data/im-lab/nas40t2/natasha/predixcan/pyschencode_hg19_qqplots.out
+#PBS -e /gpfs/data/im-lab/nas40t2/natasha/predixcan/pyschencode_hg19_qqplots.err
+
+module load gcc/6.2.0
+module load R/3.6.3
+
+Rscript /gpfs/data/im-lab/nas40t2/natasha/predixcan/qqplots_assoc.r
+
+library(tidyverse)
+library(dplyr)
+library(glue)
+
+qqplot_by_group <- function(pval, group, pval_cutoff = 1, ...) {
+  n <- length(pval)
+  pexp <- rank(pval) / n
+  df <- data.frame(p.val = pval, grp = group) %>% group_by(grp) %>% mutate(p.exp = pval_cutoff * rank(p.val) / (n() + 1)) %>% ungroup()
+  p <- ggplot(df) + 
+    geom_point(aes(x = -log10(p.exp), y = -log10(p.val), color = grp), ...) + 
+    geom_hline(yintercept = -log10(0.05 / n)) + 
+    geom_abline(slope = 1, intercept = 0, linetype = 2)
+  return(p)
+}
+
+DATA="/gpfs/data/im-lab/nas40t2/natasha/predixcan/associations"
+filelist = list.files(DATA)
+
+for(fila in filelist) {
+ df <- read_tsv(glue('{DATA}/{fila}'))
+ temp_plot_fila = qqplot_by_group(df$pvalue, group = 1, pval_cutoff = 1) + ggtitle(fila)
+ ggsave(temp_plot_fila, file=paste0("/gpfs/data/im-lab/nas40t2/natasha/predixcan/plots/qqplots/", substr(fila, 0, 22),".png"), width = 14, height = 10, units = "cm")
+}
+```
+
+
+

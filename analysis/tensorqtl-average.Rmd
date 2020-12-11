@@ -1,0 +1,221 @@
+---
+title: "tensorqtl-average"
+author: "natashasanthanam"
+date: "2020-11-18"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+This is an R file to run tensorqtl on the average GTEx phenotype file generated in gtex-binary-models.Rmd
+
+```{r, eval=FALSE}
+library(workflowr)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(glue)
+library("readxl")
+library(ggplot2)   
+library(arrow)
+library(qqman)
+DATA="/Users/natashasanthanam/GTEx-Analysis/gtex_binary_models"
+```
+
+Create longdata format from 13 different tissue models
+```{r, eval=FALSE}
+filelist = list.files(DATA)
+filelist = filelist[grep("xlsx",filelist)]
+longdata = data.frame()
+
+for(fila in filelist)
+{
+  df <- read_excel(glue('{DATA}/{fila}'))
+  tissuename = gsub("_models.xlsx","",gsub("gtex_","",fila) )
+tempo <- df %>% select(-Equation) %>%  pivot_longer(cols = starts_with("GTEX"), names_to = "Sample_ID" ) %>% mutate(tissue=tissuename) 
+  
+  longdata <- rbind(longdata, tempo)
+  }
+```
+
+Find union of people from average pheno file and GTEx whole sequence file
+```{r, eval=FALSE}
+GTEX_wholesequence_phenotypes <- read.table("/Users/natashasanthanam/GTEx-Analysis/GTEX_maf_0.01.fam") %>% select(c(V2))
+colnames(GTEX_wholesequence_phenotypes) <- c("Sample_ID")
+
+longdata$Sample_ID = str_sub(longdata$Sample_ID, end = -19) 
+longdata$Sample_ID = paste(substr(longdata$Sample_ID, 0, 4), substr(longdata$Sample_ID, 6, length(longdata$Sample_ID)), sep="-")
+
+new = inner_join(longdata, GTEX_wholesequence_phenotypes, by = "Sample_ID")
+```
+
+Create BED format (also filter for reaction rates that are present > .1 and < 0.9)
+```{r, eval=FALSE}
+x = new %>% group_by(Reaction_ID, Sample_ID) %>% summarise(avg = mean(value))
+
+x <- as.data.frame(x  %>%  pivot_wider(names_from = Sample_ID, values_from = avg)) %>% select(c(Reaction_ID, (where(~ is.numeric(.x) && mean(.x) < .9  && mean(.x) > .1)))) 
+
+x <- x %>% add_column(chr = "chr1", start = as.integer(685395), end = as.integer(685396), .before = "Reaction_ID") 
+
+colnames(x)[4] = "ID"
+
+write_tsv(x, "/Users/natashasanthanam/GTEx-Analysis/pheno-average-tensorqtl.bed.gz", col_names = TRUE)
+```
+
+ Making the covariate .txt file
+```{sh, eval=FALSE}
+geuvadis <- read.table("/Users/natashasanthanam/Github/tensorqtl/GEUVADIS.445_samples.covariates.txt", header = TRUE)
+geuvadis <- geuvadis %>% select(c(HG00096:NA18870)) 
+colnames(geuvadis) <- colnames(x)[5:289]
+
+write.table(geuvadis, file="/Users/natashasanthanam/GTEx-Analysis/covariates-average.txt", quote=FALSE, sep = "\t", row.names = TRUE, col.names = TRUE)
+```
+ 
+Genotype file 
+```{bash, eval=FALSE}
+plink2 --make-bed \
+    --output-chr chrM \
+    --vcf /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz \
+    --maf 0.01 \
+    --out /gpfs/data/im-lab/nas40t2/natasha/GTEX_maf_0.01
+```
+
+Command
+```{bash, eval=FALSE}
+python3 -m tensorqtl /gpfs/data/im-lab/nas40t2/natasha/GTEX_maf_0.01 /gpfs/data/im-lab/nas40t2/natasha/pheno-average-tensorqtl.bed.gz /gpfs/data/im-lab/nas40t2/natasha/GTEx_average_tensorqtl \
+--covariates /gpfs/data/im-lab/nas40t2/natasha/covariates-average.txt  \
+--mode trans 
+```
+
+When MAF >= 0.01 and pval < 1e-5
+  * 285 samples
+  * 13416 phenotypes
+  * 26 covariates
+  * 10,770,860 variants
+  * 9964246 variants passed MAF  filtering
+  * number of snps 6,859,449
+bonferroni = 0.05/(# reaction rates * # SNPs) = 0.05/(13416*6,859,449) = 5.433225e-13
+
+MAF >= 0.05 pval < 1e-5
+  * 285 samples
+  * 13416 phenotypes
+  * 26 covariates
+  * number of snps 6,154,122
+  * Bonferroni 0.05/(# reaction rates * # SNPs) = 0.05/(13416*6,154,122) = 6.182379e-14
+  
+Running Tensorqtl with pval < 1e-3 and maf >= 0.01
+Summary
+trans-QTL mapping
+  * 285 samples
+  * 13416 phenotypes
+  * 26 covariates
+  * 10,770,860 variants (snps) - weird that it's the same number as before
+  * 9964246 variants passed MAF  filtering
+  * 241,819,318 snps
+  bonferroni = 0.05/(# reaction rates * # SNPs) = 0.05/(13416*241,819,318) = 1.541189e-14
+
+```{r, eval=FALSE}
+gtex_maf0.05 <- read_parquet("/Users/natashasanthanam/GTEx-Analysis/GTEx_average_tensorqtl.trans_qtl_pairs.parquet", as_data_frame = TRUE)
+
+numextract <- function(string){ 
+  str_extract(string, "\\-*\\d+")
+}
+
+gtex_maf_manhattan <- gtex_maf0.05 %>% mutate(bp = as.integer(sapply(strsplit(gtex_maf0.05$variant_id,"_"), `[`, 2))) %>% mutate(chr = sapply(strsplit(gtex_maf0.05$variant_id,"_"), `[`, 1)) %>% filter(chr != "chrX")
+
+gtex_maf_manhattan$chr = as.integer(numextract(gtex_maf_manhattan$chr))
+gtex_maf_manhattan = gtex_maf_manhattan %>% select(c(chr, bp, pval, variant_id))
+
+manhattan(gtex_maf_manhattan, chr="chr", bp="bp", snp="variant_id", p="pval", ylim = c(5, 22), suggestiveline = F, genomewideline = F)
+
+sig_maf0.05 = gtex_maf0.05 %>% filter(pval <= 6.182379e-14)
+
+write_tsv(sig_maf0.05, "/Users/natashasanthanam/Github/GTEX-Analysis/output/significantsnps.txt", col_names = TRUE)
+```
+
+
+  
+<!-- Creating Manhattan Plot -->
+<!-- ```{r} -->
+<!-- gtex_tensorqtl <- read.table("/Users/natashasanthanam/GTEx-Analysis/GTEx_tensorqtl_pval1e-5.csv", header = TRUE) -->
+
+<!-- gtex_manhattan <- gtex_tensorqtl %>% mutate(bp = as.integer(sapply(strsplit(gtex_tensorqtl$variant_id,"_"), `[`, 2))) %>% mutate(chr = as.integer(1)) %>% select(c(chr, bp, pval, variant_id)) -->
+
+<!-- manhattan(gtex_manhattan, chr="chr", bp="bp", snp="variant_id", p="pval", ylim = c(5, 30), cex = 0.4, suggestiveline = F, genomewideline = F, annotatePval = 5.433225e-13) -->
+
+<!-- ``` -->
+
+<!-- Generate a data frame of p-values that meet the bonferroni threshold -->
+<!-- ```{r} -->
+<!-- sig = gtex_tensorqtl %>% filter(pval <= 5.433225e-13) -->
+<!-- #2,988 snps that meet the threshold -->
+<!-- ``` -->
+
+QQPlot
+```{r, eval=FALSE}
+qqplot_by_group <- function(pval, group, pval_cutoff = 1, ...) {
+  n <- length(pval)
+  pexp <- rank(pval) / n
+  df <- data.frame(p.val = pval, grp = group) %>% group_by(grp) %>% mutate(p.exp = pval_cutoff * rank(p.val) / (n() + 1)) %>% ungroup()
+  p <- ggplot(df) + 
+    geom_point(aes(x = -log10(p.exp), y = -log10(p.val), color = grp), ...) + 
+    geom_hline(yintercept = -log10(0.05 / n)) + 
+    geom_abline(slope = 1, intercept = 0, linetype = 2)
+  return(p)
+}
+
+qqplot_by_group(gtex_tensorqtl$pval, group = 1, pval_cutoff = 1e-5)
+```
+
+
+Create a script to separate p-values by Reaction and then create a qq plot for each reaction (to be submitted as a job to CRI)
+
+```{sh, eval=FALSE}
+!/bin/bash
+
+#PBS -N tensorqtl_qqplots_nsanthanam
+#PBS -S /bin/bash
+#PBS -l walltime=23:05:00:00
+#PBS -l nodes=1:ppn=1
+
+#PBS -l mem=8gb
+
+
+#PBS -o /gpfs/data/im-lab/nas40t2/natasha/qqplots/myjob.out
+#PBS -e /gpfs/data/im-lab/nas40t2/natasha/qqplots/myjob.err
+
+
+
+module load gcc/6.2.0
+module load R
+
+# Execute the program
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(arrow)
+library(qqman)
+
+df <- read.table("/gpfs/data/im-lab/nas40t2/natasha/tensorqtl_files/gtex_tensorqtl.txt", header = TRUE)
+lth <- df %>% group_by(phenotype_id) %>% summarise(avg = mean(pval))
+n1 = as.list(lth$phenotype_id)
+
+             
+for (i in n1) {
+  table_i <- df %>% filter(phenotype_id == i)
+   if(nrow(table_i) != 0) {
+  temp_plot = qqplot_by_group(table_i$pval, group = 1, pval_cutoff = 1e-5) + ggtitle(i)
+  ggsave(temp_plot, file=paste0("/gpfs/data/im-lab/nas40t2/natasha/qqplots/", i,".png"), width = 14, height = 10, units = "cm")
+   }
+}   
+```
+
+
+Count number of graphs created by CRI 
+
+```{bash, eval=FALSE}
+ls -al | grep ^[-] | wc -l
+
+```
+

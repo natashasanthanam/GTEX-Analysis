@@ -1,0 +1,60 @@
+---
+title: "manhattan_assoc"
+author: "natashasanthanam"
+date: "2020-12-09"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## Create manhattan plots for association data fro predixcan for each reaction id
+
+Read in annotated gene file and clean it up
+
+Modify association files so in format to create manhattan plot
+
+bonferroni = 0.05/(# reaction rates * # gene_ids)
+           = 0.05/(2430*13649) = 1.507519e-09
+           
+           
+```{r, eval=FALSE}
+library(tidyverse)
+library(glue)
+library(qqman)
+
+DATA="/gpfs/data/im-lab/nas40t2/natasha/predixcan/associations"
+DATA_2 = "/gpfs/data/im-lab/nas40t2/Data/GTEx/V8/annotation"
+filelist = list.files(DATA)
+
+numextract <- function(string){ 
+  str_extract(string, "\\-*\\d+")
+}
+```
+
+```{r, eval=FALSE}
+annotate <- read.table(glue('{DATA_2}/gencode.v26.GRCh38.genes.gtf'), header = TRUE, sep = '\t')
+colnames(annotate) <- c("chr", "build", "gene_type", "start", "end", "X1", "X2", "X3", "gene")
+annotate$gene <- as.character(annotate$gene)
+
+annotate$gene <- sapply(strsplit(annotate$gene,";"), `[`, 1)
+annotate$gene <- sapply(strsplit(annotate$gene, " "), `[`, 2)
+annotate$gene <- substr(annotate$gene, 1, 15)
+
+annotate <- annotate %>% filter(gene_type == "gene") %>% select( -c (X1, X2, X3))
+annotate$chr = as.integer(numextract(annotate$chr))
+```
+ 
+```{r, eval=FALSE} 
+for(fila in filelist) {
+ df_fila <- read.table(glue('{DATA}/{fila}'), header = TRUE, sep = '\t')
+ df_fila$gene = as.character(df_fila$gene)
+ manhattan_fila <- inner_join(annotate, df_fila, by = "gene")
+ mypath <- file.path("/gpfs/data/im-lab/nas40t2/natasha/predixcan/plots/manhattan_plots", paste(substr(fila, 13, 22), ".jpg", sep = ""))
+ jpeg(file=mypath)
+ manhattan(manhattan_fila, chr="chr", bp="start", snp="gene", p="pvalue", ylim = c(0, 15), suggestiveline = F, genomewideline = F, main = "Manhattan plot of P-values {fila}")
+ dev.off()
+}
+```
+
+
+

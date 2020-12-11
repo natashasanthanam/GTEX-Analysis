@@ -1,0 +1,104 @@
+---
+title: "aggregate_assoc"
+author: "natashasanthanam"
+date: "2020-12-10"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+This is an R file to aggregate the p-values and standard error from the 2430 reaction ids into one file so that we can make one whole manhattan plot
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(glue)
+DATA = "/gpfs/data/im-lab/nas40t2/natasha/predixcan/associations"
+```
+
+```{r, eval=FALSE}
+filelist = list.files(DATA)
+
+reaction_ids <- read_tsv("/gpfs/data/im-lab/nas40t2/natasha/predixcan/list_reactiion_ids.txt")
+colnames(reaction_ids) <- "Reaction_ID"
+```
+
+```{r, eval=FALSE}
+i <- 1
+full_df <- data.frame()
+
+for(fila in filelist) {
+ assoc_fila <- read.table(glue('{DATA}/{fila}'), header = TRUE, sep = '\t')
+ tempo <- cbind(assoc_fila, y=reaction_ids[i,]) %>% select(-c(status)) %>% filter(pvalue < 5*10^-6)
+ full_df <- rbind(full_df, tempo)
+ i<-i+1
+ } 
+
+write_tsv(full_df, "/gpfs/data/im-lab/nas40t2/natasha/predixcan/assoc_full.txt")
+```
+
+302 genes that have p-values < 5*10^-6
+
+Generating Manhattan Plot
+```{r, eval=FALSE}
+DATA_2 = "/Users/natashasanthanam/CRI"
+numextract <- function(string){ 
+  str_extract(string, "\\-*\\d+")
+}
+assoc_full <- read_tsv("/Users/natashasanthanam/Rsync/assoc_full.txt")
+
+annotate <- read.table(glue('{DATA_2}/gencode.v26.GRCh38.genes.gtf'), header = TRUE, sep = '\t')
+colnames(annotate) <- c("chr", "build", "gene_type", "start", "end", "X1", "X2", "X3", "gene")
+annotate$gene <- as.character(annotate$gene)
+
+annotate$gene <- sapply(strsplit(annotate$gene,";"), `[`, 1)
+annotate$gene <- sapply(strsplit(annotate$gene, " "), `[`, 2)
+annotate$gene <- substr(annotate$gene, 1, 15)
+
+annotate <- annotate %>% filter(gene_type == "gene") %>% select( -c (X1, X2, X3))
+annotate$chr = as.integer(numextract(annotate$chr))
+```
+
+```{r, eval=FALSE}
+ manhattan_assoc <- inner_join(annotate, assoc_full, by = "gene")
+ manhattan(manhattan_assoc, chr="chr", bp="start", snp="gene", p="pvalue", ylim = c(5, 15), suggestiveline = F, genomewideline = F,annotatePval = 1.5e-09, main = "Manhattan plot of P-values")
+ 
+qqplot_by_group(assoc_full$pvalue, group = 1, pval_cutoff = 5e-06)
+
+```
+
+Analysis of significant genes
+
+Only 141 genes across all reaction IDs have a p-value less than 5e-06
+Only 241 of the initial 2430 reaction Ids have p-values less than 5e -06
+```{r, eval=FALSE}
+assoc_temp <- assoc_full %>% group_by(Reaction_ID) %>% summarise(n = n())
+assoc_tempo <- assoc_full %>% group_by(gene_id) %>% summarise(n=n())
+```
+
+
+Create a comprehensive txt file that includes significant genes, hugo gene name and annotations
+9 genes have p-values that meet the bonferroni corrected threshold
+```{r, eval=FALSE}
+hugo_gene <- read_tsv("/Users/natashasanthanam/Github/GTEX-Analysis/data/annotations_gencode_v26.tsv")
+colnames(assoc_full)[1] = "gene_id"
+
+assoc_hugo <- inner_join(hugo_gene, assoc_full, by = "gene_id")
+
+
+assoc_hugo$chromosome = as.integer(numextract(assoc_hugo$chromosome))
+manhattan(assoc_hugo, chr="chromosome", bp="start", snp="gene_id", p="pvalue", ylim = c(5, 20), suggestiveline = F, genomewideline = F,annotatePval = 1.5e-09, annotateTop = TRUE,  main = "Manhattan plot of P-values")
+
+check_pvals <- assoc_hugo_new %>% filter(pvalue < 1.5e-09)
+check_pvals <- check_pvals %>% group_by(gene_id) %>% summarise(n=n())
+```
+
+```{r, eval=FALSE}
+rxn_ids <- longdata %>% group_by(Reaction_ID, Equation) %>% summarise(n=n())
+rxn_ids <- rxn_ids %>% select(-c(n))
+
+assoc_hugo_new <- inner_join(assoc_hugo, rxn_ids, by = "Reaction_ID")
+
+
+write_tsv(assoc_hugo_new, "/Users/natashasanthanam/Github/GTEX-Analysis/data/psychencode_hg19_assoc_full.txt")
+```
+

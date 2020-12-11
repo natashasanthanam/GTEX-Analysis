@@ -1,0 +1,236 @@
+---
+title: "running-predixcan"
+author: "natashasanthanam"
+date: "2020-11-30"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+## This is a file for running Predixcan on GTEx V8 average phenotype data 
+
+The genotype file is stored in CRI and here we are finding expression using models trained on GTEx data (might be a problem later). We will then calculate association using the phenotype file. 
+
+```{r, eval=FALSE}
+lab="/Users/natashasanthanam/Github/QGT-Columbia-HKI"
+CODE=glue::glue("{lab}/code")
+source(glue::glue("{CODE}/load_data_functions.R"))
+source(glue::glue("{CODE}/plotting_utils_functions.R"))
+
+PRE="/Users/natashasanthanam/QGT-Columbia-HKI"
+MODEL=glue::glue("{PRE}/models")
+DATA=glue::glue("{PRE}/data")
+RESULTS=glue::glue("{PRE}/results")
+METAXCAN=glue::glue("{PRE}/repos/MetaXcan-master/software")
+FASTENLOC=glue::glue("{PRE}/repos/fastenloc-master")
+TORUS=glue::glue("{PRE}/repos/torus-master")
+TWMR=glue::glue("{PRE}/repos/TWMR-master")
+
+gencode_df = load_gencode_df()
+```
+
+```{bash, eval=FALSE}
+export PRE="/Users/natashasanthanam/QGT-Columbia-HKI"
+export LAB="/Users/natashasanthanam/Github/QGT-Columbia-HKI"
+export CODE=$LAB/code
+export DATA=$PRE/data
+export MODEL=$PRE/models
+export RESULTS=$PRE/results
+export METAXCAN=$PRE/repos/MetaXcan-master/software
+export TWMR=$PRE/repos/TWMR-master
+```
+
+
+```{bash, eval=FALSE}
+#!/bin/bash
+
+#PBS -N predixcan_amygdala
+#PBS -S /bin/bash
+#PBS -l walltime=2:1:00:00
+#PBS -l nodes=1:ppn=1
+
+#PBS -l mem=8gb
+
+
+#PBS -o /gpfs/data/im-lab/nas40t2/natasha/predixcan/Predixcan_amygdala.out
+#PBS -e /gpfs/data/im-lab/nas40t2/natasha/predixcan/Predixcan_amygdala.err
+
+source ~/.bashrc
+source ~/.bash_profile
+conda activate /gpfs/data/im-lab/nas40t2/natasha/envs/predixcan
+
+printf "Predict expression\n\n"
+python3 /gpfs/data/im-lab/nas40t2/natasha/MetaXcan/software/Predict.py \
+--model_db_path /gpfs/data/im-lab/nas40t2/abarbeira/projects/gtex_v8/models_v1/eqtl/mashr/mashr_Brain_Amygdala.db \
+--model_db_snp_key varID \
+--vcf_genotypes /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz \
+--vcf_mode genotyped \
+--on_the_fly_mapping METADATA "{}_{}_{}_{}_b38" \
+--prediction_output /gpfs/data/im-lab/nas40t2/natasha/predixcan/amygdala__predict_new.txt \
+--prediction_summary_output /gpfs/data/im-lab/nas40t2/natasha/predixcan/amygdala__summary_new.txt \
+--verbosity 9 \
+--throw
+```
+
+
+
+```{bash, eval=FALSE}
+export PRE=/gpfs/data/im-lab/nas40t2/Data/test-PrediXcan-GTEx
+export DATA=$PRE/data
+export MODEL=$PRE/models
+export RESULTS=$PRE/results/
+export METAXCAN=$PRE/repos/MetaXcan-master/software
+export VCFSMALL=$PRE/data/gtex-small-common-test.vcf.gz
+printf "Predict expression\n\n"
+
+python3   $METAXCAN/Predict.py \
+--model_db_path /gpfs/data/im-lab/nas40t2/abarbeira/projects/gtex_v8/models_v1/eqtl/mashr/mashr_Brain_Amygdala.db \
+--model_db_snp_key varID \
+--vcf_genotypes  $VCFSMALL \
+--vcf_mode genotyped \
+--prediction_output /gpfs/data/im-lab/nas40t2/natasha/example_amygdala__predict.txt  \
+--prediction_summary_output /gpfs/data/im-lab/nas40t2/natasha/example_amygdala__summary.txt \
+--verbosity 9 \
+--throw \
+--on_the_fly_mapping METADATA "{}_{}_{}_{}_b38" 
+```
+
+
+Run Association with phenotype file
+```{bash, eval=FALSE}
+
+export PRE=/gpfs/data/im-lab/nas40t2/Data/test-PrediXcan-GTEx
+export RESULTS=/gpfs/data/im-lab/nas40t2/natasha/predixcan/
+export METAXCAN=$PRE/repos/MetaXcan-master/software
+
+printf "association\n\n"
+python3 $METAXCAN/PrediXcanAssociation.py \
+--expression_file $RESULTS/pyschencode_hg19__predict_abrv.txt \
+--input_phenos_file $RESULTS/pheno_predixcan.txt \
+--input_phenos_column 3 \
+--output $RESULTS/psychencode_hg19_test2__association_3.txt \
+--verbosity 9 \
+--throw
+```
+
+
+Predicxcan command for GTEx V8 file using Psychencode hg 19 models
+```{bash, eval=FALSE}
+export PRE=/gpfs/data/im-lab/nas40t2/natasha/testexample_predixcan
+export DATA=$PRE/Data
+export MODEL= MODEL=$PRE/models
+export RESULTS=$PRE/results/
+export METAXCAN=$PRE/repo/MetaXcan/software
+export VCFSMALL=$PRE/Data/gtex-small-common-test.vcf.gz
+
+printf "Predict expression\n\n"
+
+python3   $METAXCAN/Predict.py \
+--model_db_path $MODEL/psychencode_hg38.db \
+--model_db_snp_key varID \
+--vcf_genotypes  $VCFSMALL \
+--vcf_mode genotyped \
+--on_the_fly_mapping METADATA "{}_{}_{}_{}_b38" \
+--prediction_output $RESULTS/example_psychencode38__predict.txt  \
+--prediction_summary_output $RESULTS/example_psychencode38__summary.txt \
+--verbosity 9 \
+--throw 
+
+```
+
+```{bash, eval=FALSE}
+#!/bin/bash
+
+#PBS -N predixcan_psychencode_hg38
+#PBS -S /bin/bash
+#PBS -l walltime=4:12:00:00
+#PBS -l nodes=1:ppn=1
+
+#PBS -l mem=8gb
+
+
+#PBS -o /gpfs/data/im-lab/nas40t2/natasha/predixcan/Predixcan_psychencode_hg38.out
+#PBS -e /gpfs/data/im-lab/nas40t2/natasha/predixcan/Predixcan_psychencode_hg38.err
+
+source ~/.bashrc
+source ~/.bash_profile
+conda activate /gpfs/data/im-lab/nas40t2/natasha/envs/predixcan
+
+printf "Predict expression\n\n"
+python3 /gpfs/data/im-lab/nas40t2/natasha/testexample_predixcan/repo/MetaXcan/software/Predict.py \
+--model_db_path /gpfs/data/im-lab/nas40t2/natasha/testexample_predixcan/models/psychencode_hg38.db \
+--model_db_snp_key varID \
+--vcf_genotypes /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz \
+--vcf_mode genotyped \
+--on_the_fly_mapping METADATA "{}_{}_{}_{}_b38" \
+--prediction_output /gpfs/data/im-lab/nas40t2/natasha/predixcan/psychencdoe_hg38__predict_new.txt \
+--prediction_summary_output /gpfs/data/im-lab/nas40t2/natasha/predixcan/psychencode_hg38__summary_new.txt \
+--verbosity 9 \
+--throw
+```
+
+```{r, eval=FALSE}
+phenotype_predixcan <- read_tsv("/Users/natashasanthanam/Github/GTEX-Analysis/data/pheno_average.txt",col_names = FALSE)
+
+GTEX_wholesequence_phenotypes <- read.table("/Users/natashasanthanam/GTEx-Analysis/GTEX_maf_0.01.fam") %>% select(c(V2))
+
+colnames(GTEX_wholesequence_phenotypes) <- "FID"
+
+colnames(phenotype_predixcan)[1:2] = c("FID", "IID")
+colnames(phenotype_predixcan)[3:2432] = 1:2430
+
+
+new = inner_join(phenotype_predixcan, GTEX_wholesequence_phenotypes, by = "FID")
+
+write_tsv(new, "/Users/natashasanthanam/Github/GTEX-Analysis/data/pheno_predixcan.txt", col_names = TRUE)
+
+
+
+```
+
+
+Check contents of .db model file
+```{bash, eval=FALSE}
+sqlite3
+
+.open "psychencode_hg38.db";
+SELECT * FROM weights ;
+```
+
+Check genotype vcf file
+```{bash, eval=FALSE}
+cat $CARTA/fileVCF.vcf|grep -v '##'|head -n 2|cut -f 1-9
+```
+
+Potential script for CRI for all associations
+
+```{bash, eval=FALSE}
+#!/bin/bash
+
+#PBS -N predixcan_association_hg19_full
+#PBS -S /bin/bash
+#PBS -l walltime=7:4:00:00
+#PBS -l nodes=1:ppn=1
+
+#PBS -l mem=8gb
+
+
+#PBS -o /gpfs/data/im-lab/nas40t2/natasha/predixcan/logs/Predixcan_assoc_hg19.out
+#PBS -e /gpfs/data/im-lab/nas40t2/natasha/predixcan/logs/Predixcan_assoc_hg19.err
+
+source ~/.bashrc
+source ~/.bash_profile
+conda activate /gpfs/data/im-lab/nas40t2/natasha/envs/predixcan
+
+
+for i in {21..2430}
+do 
+python3 /gpfs/data/im-lab/nas40t2/Data/test-PrediXcan-GTEx/repos/MetaXcan-master/software/PrediXcanAssociation.py \
+--expression_file /gpfs/data/im-lab/nas40t2/natasha/predixcan/pyschencode_hg19__predict_abrv.txt \
+--input_phenos_file /gpfs/data/im-lab/nas40t2/natasha/predixcan/pheno_predixcan.txt \
+--input_phenos_column $i \
+--output /gpfs/data/im-lab/nas40t2/natasha/predixcan/association/psychencode_hg19_${i}_association.txt \
+--verbosity 9 \
+--throw
+done
+```

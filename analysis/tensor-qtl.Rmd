@@ -1,0 +1,115 @@
+---
+title: "tensor-qtl"
+author: "natashasanthanam"
+date: "2020-11-12"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+```{sh, eval=FALSE}
+library(workflowr)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library("readxl")
+library(arrow)
+library(qqman)
+DATA="/Users/natashasanthanam/Github/GTEX-Analysis/data"
+```
+
+Making the phenotype file in BED format from the GTEx cortex data
+```{sh, eval=FALSE}
+#Read in Excel file of Cortex Phenotypes
+gtex_pheno <- read_excel(glue::glue("{DATA}/gtex_cortex_models_10.10.20.xlsx" ))
+gtex_pheno <- filter(gtex_pheno, gtex_pheno$Average < 0.90 & gtex_pheno$Average > 0.10)
+
+rownames(gtex_pheno) = gtex_pheno$Reaction_ID
+
+gtex_pheno <- gtex_pheno %>% add_column(chr = "chr1", start = as.integer(685395), end = as.integer(685396), ID = gtex_pheno$Reaction_ID, .before = "Reaction_ID") %>% select(- c(Equation, Reaction_ID, Average) ) 
+
+colnames(gtex_pheno)[5:259] <- paste(substr(colnames(gtex_pheno)[5:259], 0, 4), substr(colnames(gtex_pheno)[5:259], 6, 10), sep="-")
+
+gtex_pheno = gtex_pheno %>% select( -c(`GTEX-11DXW`, `GTEX-11DXY`, `GTEX-11OC5`, `GTEX-12WSC`, `GTEX-139T8`, `GTEX-1I19N`, `GTEX-1I1CD`, `GTEX-1I1GQ`, `GTEX-1I1GR`, `GTEX-1I1GV`, `GTEX-1I1HK`, `GTEX-1IDJH`, `GTEX-1IKJJ`, `GTEX-13NYS`, `GTEX-145LS`, `GTEX-14A5I`, `GTEX-14ASI`, `GTEX-16Z82`, `GTEX-17HG3`, `GTEX-1C6VS`, `GTEX-1CAV2`, `GTEX-1EN7A`, `GTEX-1GZ2Q`, `GTEX-1H1DG`, `GTEX-1H1ZS`, `GTEX-1H23P`, `GTEX-1H2FU`, `GTEX-1H3NZ`, `GTEX-1H3O1`, `GTEX-1H3VE`, `GTEX-1HB9E`, `GTEX-1HBPH`, `GTEX-1HBPI`, `GTEX-1HBPM`, `GTEX-1HCU6`, `GTEX-1HCVE`, `GTEX-1HFI6`,`GTEX-1HGF4`, `GTEX-1HR98`, `GTEX-1HSKV`, `GTEX-1HSMO`, `GTEX-1HT8W`, `GTEX-1HUB1`, `GTEX-1IL2U`, `GTEX-1IOXB`, `GTEX-1IY9M`, `GTEX-1J1OQ`, `GTEX-1J8Q2`, `GTEX-1JJE9`, `GTEX-1JJEA`, `GTEX-PVOW.`, `GTEX-PWO3.`, `GTEX-1IKK5`, `GTEX-ZE9C.`))
+
+colnames(gtex_pheno)[164:206] <- substr(colnames(gtex_pheno)[164:206], 0, 9)
+
+write_tsv(gtex_pheno, "/Users/natashasanthanam/Github/GTEX-Analysis/data/pheno-tensorqtl.bed.gz", col_names = TRUE)
+```
+
+Making the covariate .txt file
+```{sh, eval=FALSE}
+geuvaids_pheno <- read.table("/Users/natashasanthanam/Github/tensorqtl/GEUVADIS.445_samples.expression.bed.gz", header = TRUE)
+
+geuvadis <- read.table("/Users/natashasanthanam/Github/tensorqtl/GEUVADIS.445_samples.covariates.txt", header = TRUE)
+geuvadis <- geuvadis %>% select(c(HG00096:NA11894)) 
+colnames(geuvadis) <- colnames(gtex_pheno)[5:205]
+
+write.table(geuvadis, file="/Users/natashasanthanam/Github/GTEX-Analysis/data/covariates.txt", quote=FALSE, sep = "\t", row.names = TRUE, col.names = TRUE)
+```
+
+
+Making the genotype files
+```{sh, eval = FALSE}
+plink2 --make-bed \
+    --output-chr chrM \
+    --vcf /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.SHAPEIT2_phased.vcf.gz \
+    --out /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_tensorqtl
+```
+
+
+Setting up tensorqtl in CRI
+```{sh, eval=FALSE}
+conda activate /gpfs/data/im-lab/nas40t2/bin/envs/tensorqtl
+git clone git@github.com:broadinstitute/tensorqtl.git
+ cd tensorqtl
+ pip install -r install/requirements.txt 
+```
+
+
+Running the command
+```{bash, eval=FALSE}
+python3 -m tensorqtl /gpfs/data/im-lab/nas40t2/Data/GTEx/V8/genotype/plink_files/GTEX_tensorqtl /gpfs/data/im-lab/nas40t2/natasha/tensorqtl/pheno-tensorqtl.bed.gz /gpfs/data/im-lab/nas40t2/natasha/GTEX_tensorqtl \
+--covariates /gpfs/data/im-lab/nas40t2/natasha/tensorqtl/covariates.txt  \
+--mode trans 
+```
+
+Reading the parquet file so that it can be read into R and creating manhattan and qq plot
+
+```{r, eval=FALSE}
+gtex_tensorqtl <- read_parquet(glue::glue("{DATA}/GTEX_tensorqtl.trans_qtl_pairs.parquet"), as_data_frame = TRUE)
+
+gtex_manhattan <- gtex_tensorqtl %>% mutate(bp = as.integer(sapply(strsplit(gtex_tensorqtl$variant_id,"_"), `[`, 2))) %>% mutate(chr = as.integer(1)) %>% select(c(chr, bp, pval, variant_id))
+
+manhattan(gtex_manhattan, chr="chr", bp="bp", snp="variant_id", p="pval", ylim = c(5, 15), suggestiveline = F, genomewideline = F, annotatePval = 1e-10, annotateTop = FALSE )
+
+qq(gtex_tensorqtl$pval, main = "QQ plot of GTEx Cortex p-values")
+
+```
+
+
+Creating a txt file that includes the union of sample ids in 
+ 
+```{r, eval=FALSE}
+GTEX_wholesequence_phenotypes <- read.table("/Users/natashasanthanam/Github/GTEX-Analysis/data/GTEX_new.fam") %>% select(c(V1))
+colnames(GTEX_wholesequence_phenotypes) <- c("people")
+
+
+GTEX_cortex_phenotypes <- gtex_pheno %>% select(-c(chr, start, end, ID)) 
+GTEX_cortex_phenotypes = t(GTEX_cortex_phenotypes)
+GTEX_cortex_phenotypes = as.data.frame(GTEX_cortex_phenotypes) %>% mutate(people = rownames(GTEX_cortex_phenotypes)) %>% select(c(people))   
+
+
+both = intersect(GTEX_wholesequence_phenotypes, GTEX_cortex_phenotypes) %>% mutate(present_in_whole_sequence = "yes") %>% mutate(present_in_cortex = "yes")
+
+onlyinwhole = setdiff(GTEX_wholesequence_phenotypes, GTEX_cortex_phenotypes) %>% mutate(present_in_whole_sequence = "yes") %>% mutate(present_in_cortex = "no")
+
+onlyincortex = setdiff(GTEX_cortex_phenotypes, GTEX_wholesequence_phenotypes) %>% mutate(present_in_whole_sequence = "no") %>% mutate(present_in_cortex = "yes")
+
+
+complete = both %>% rbind(onlyinwhole, onlyincortex)
+
+write_csv(complete, "/Users/natashasanthanam/Github/GTEX-Analysis/data/complete_sampleids.txt", col_names = TRUE )
+```
+
+
